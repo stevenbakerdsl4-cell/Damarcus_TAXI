@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Damarcus — Clickable Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  html, body {
+    margin: 0; padding: 0;
+    background: radial-gradient(ellipse at top, #1a1a1e 0%, #0a0a0c 60%);
+    min-height: 100vh;
+    font-family: 'Inter', -apple-system, system-ui, sans-serif;
+    color: #f5f1ea; overflow: hidden;
+  }
+  * { box-sizing: border-box; }
+  @keyframes p { 0%, 100% { opacity: 1 } 50% { opacity: 0.35 } }
+  @keyframes slideFwd {
+    from { opacity: 0; transform: translateX(30px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes slideBack {
+    from { opacity: 0; transform: translateX(-30px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  /* Ambient checker pattern on the backdrop */
+  body::before {
+    content: ''; position: fixed; inset: 0;
+    background:
+      radial-gradient(circle at 15% 30%, rgba(255,180,0,0.06), transparent 40%),
+      radial-gradient(circle at 85% 70%, rgba(122,31,43,0.06), transparent 40%);
+    pointer-events: none;
+  }
+</style>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="ios_frame.jsx"></script>
+<script type="text/babel" src="brand.jsx"></script>
+<script type="text/babel" src="proto_shell.jsx"></script>
+<script type="text/babel" src="routes_pax.jsx"></script>
+<script type="text/babel" src="routes_pax_b.jsx"></script>
+<script type="text/babel" src="routes_driver.jsx"></script>
+
+<script type="text/babel" data-presets="react">
+// Screens where the tab bar should NOT show (fullscreen / no chrome)
+const NO_TAB = new Set(['welcome', 'whereto', 'rideoptions', 'booked', 'tracking', 'intrip', 'complete',
+                        'driverReq', 'driverNav', 'driverTrip']);
+
+// Which routes are considered "dark" surfaces (for tab bar theme)
+const DARK_ROUTES = new Set(['welcome', 'booked', 'intrip', 'driverHome', 'driverReq', 'driverNav', 'driverTrip']);
+
+function Prototype() {
+  const nav = useRouter('welcome');
+  const dark = DARK_ROUTES.has(nav.current);
+  const showTab = !NO_TAB.has(nav.current);
+
+  return (
+    <div style={{
+      minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+      padding: 60, position: 'relative',
+    }}>
+      {/* Guide rail */}
+      <GuideRail
+        hint={HINTS[nav.current] || 'Tap around.'}
+        onReset={nav.reset}
+        mode={nav.mode}
+        onSwitchMode={nav.switchMode}
+      />
+
+      {/* Left side: flow map (compact list of screens) */}
+      <div style={{
+        position: 'fixed', left: 24, top: '50%', transform: 'translateY(-50%)',
+        width: 200, zIndex: 30,
+      }}>
+        <FlowMap nav={nav}/>
+      </div>
+
+      {/* Phone frame */}
+      <div style={{ position: 'relative' }}>
+        <PhoneFrame dark={dark}>
+          <RouteView nav={nav}/>
+          {showTab && <TabBarProto tab={nav.tab} setTab={nav.setTab} mode={nav.mode} nav={nav}/>}
+        </PhoneFrame>
+
+        {/* Screen name label under phone */}
+        <div style={{
+          position: 'absolute', bottom: -50, left: 0, right: 0,
+          textAlign: 'center', fontFamily: DAM.mono, fontSize: 11,
+          color: 'rgba(245,241,234,0.55)', letterSpacing: 2,
+        }}>
+          {nav.mode.toUpperCase()} · {nav.current.toUpperCase()}
+        </div>
+      </div>
+
+      {/* Right side: legend */}
+      <div style={{
+        position: 'fixed', right: 24, top: '50%', transform: 'translateY(-50%)',
+        width: 220, zIndex: 30, color: DAM.paper,
+      }}>
+        <Legend/>
+      </div>
+    </div>
+  );
+}
+
+function FlowMap({ nav }) {
+  const paxFlow = [
+    ['welcome',     'Welcome'],
+    ['home',        'Home'],
+    ['whereto',     'Where to'],
+    ['rideoptions', 'Ride options'],
+    ['booked',      'Driver assigned'],
+    ['tracking',    'Live tracking'],
+    ['intrip',      'In-trip'],
+    ['complete',    'Rate + tip'],
+    ['schedule',    'Schedule ahead'],
+    ['history',     'Ride history'],
+    ['profile',     'Account'],
+  ];
+  const drvFlow = [
+    ['driverHome',  'Driver home'],
+    ['driverReq',   'Ride request'],
+    ['driverNav',   'Navigate'],
+    ['driverTrip',  'In-trip'],
+    ['earnings',    'Earnings'],
+  ];
+  const flow = nav.mode === 'driver' ? drvFlow : paxFlow;
+
+  return (
+    <div style={{
+      background: 'rgba(20,20,22,0.7)', backdropFilter: 'blur(20px)',
+      borderRadius: 20, padding: 18,
+      boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
+    }}>
+      <div style={{
+        fontFamily: DAM.mono, fontSize: 10, color: DAM.amber, letterSpacing: 2, marginBottom: 12,
+      }}>{nav.mode === 'driver' ? 'DRIVER FLOW' : 'PASSENGER FLOW'}</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        {flow.map(([k, l], i) => {
+          const on = nav.current === k;
+          return (
+            <button key={k} onClick={() => nav.go(k)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: '8px 10px', borderRadius: 8, border: 'none',
+                background: on ? DAM.amber : 'transparent',
+                color: on ? DAM.ink : 'rgba(245,241,234,0.7)',
+                fontFamily: DAM.ui, fontSize: 12, fontWeight: on ? 700 : 500,
+                cursor: 'pointer', textAlign: 'left',
+                transition: 'background 0.15s, color 0.15s',
+              }}>
+              <div style={{
+                width: 16, height: 16, borderRadius: 4,
+                background: on ? DAM.ink : 'rgba(255,255,255,0.08)',
+                color: on ? DAM.amber : 'rgba(245,241,234,0.5)',
+                display: 'grid', placeItems: 'center',
+                fontFamily: DAM.mono, fontSize: 9, fontWeight: 700,
+              }}>{i + 1}</div>
+              {l}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function Legend() {
+  return (
+    <div style={{
+      background: 'rgba(20,20,22,0.7)', backdropFilter: 'blur(20px)',
+      borderRadius: 20, padding: 18,
+      boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
+    }}>
+      <div style={{
+        fontFamily: DAM.display, fontWeight: 900, fontSize: 24, letterSpacing: -0.5,
+        marginBottom: 6, color: DAM.paper,
+      }}>Damarcus</div>
+      <div style={{
+        fontFamily: DAM.mono, fontSize: 10, color: DAM.amber, letterSpacing: 2, marginBottom: 14,
+      }}>TALLAHASSEE · CLICKABLE v1</div>
+      <div style={{ fontFamily: DAM.ui, fontSize: 12, color: 'rgba(245,241,234,0.7)', lineHeight: 1.5 }}>
+        Working prototype of Damarcus's taxi app. Tap anything with a hover or press state.
+      </div>
+
+      <div style={{ marginTop: 16, borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 14 }}>
+        <div style={{ fontFamily: DAM.mono, fontSize: 10, color: DAM.amber, letterSpacing: 2, marginBottom: 8 }}>TRY THIS</div>
+        <div style={{ fontFamily: DAM.ui, fontSize: 12, color: 'rgba(245,241,234,0.85)', lineHeight: 1.6 }}>
+          1. <b>Get started</b> → tap search<br/>
+          2. Pick <b>Doak Campbell</b><br/>
+          3. Book a ride, watch driver arrive<br/>
+          4. Tap driver card, then fare card<br/>
+          5. Rate {'&'} tip → back home<br/>
+          6. Switch to <b>Driver</b> mode above
+        </div>
+      </div>
+
+      <div style={{ marginTop: 16, borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 14 }}>
+        <div style={{ fontFamily: DAM.mono, fontSize: 10, color: DAM.amber, letterSpacing: 2, marginBottom: 8 }}>SHORTCUTS</div>
+        <div style={{ fontFamily: DAM.mono, fontSize: 11, color: 'rgba(245,241,234,0.7)', lineHeight: 1.8 }}>
+          Reset · start over<br/>
+          Flow list (left) · jump to any screen
+        </div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<Prototype/>);
+</script>
+</body>
+</html>
